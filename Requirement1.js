@@ -28,13 +28,13 @@ function add({name, category, quantity, price, unit, customFields}) {
     logs.push({ type: "add", item });
 }
 
-function edit(index, {name, category, quantity, price, unit, customFields}) {
+function edit(index, item) {
     if (!index && index != 0) {
         throw Error("Index must be present");
     }
 
-    let newItem = { ...items[index], name, category, quantity, price, unit, customFields }
-    logs.push({ type: "edit", old: items[index], new: {...items[index]} });
+    let newItem = { ...items[index], ...item }
+    logs.push({ type: "edit", old: items[index], new: newItem });
     items[index] = newItem;
 }
 
