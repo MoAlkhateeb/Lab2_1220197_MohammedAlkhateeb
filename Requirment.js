@@ -16,11 +16,11 @@ class Rectangle {
   }
 
   getHeight() {
-    return this.h;
+    return this.height;
   }
 
   getWidth() {
-    return this.w;
+    return this.width;
   }
 
   getArea() {
