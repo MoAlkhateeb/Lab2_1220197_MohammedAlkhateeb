@@ -104,7 +104,7 @@ function addField(index) {
 function updateField(name, fieldIndex, fieldValue) {
     let item = items.find(item => item.name === name);
 
-    if (item.customFields && item.customFields[fieldIndex]) {
+    if (item && item.customFields && item.customFields[fieldIndex]) {
         item.customFields[fieldIndex] = fieldValue
     }
 }
