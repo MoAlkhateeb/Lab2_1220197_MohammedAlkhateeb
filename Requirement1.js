@@ -1,43 +1,182 @@
-var i = [], t = [], c = [], f = {};
+let items = [], logs = [], categories = [], fields = {};
 
-function doStuff(a, b) {
-    if (["add", "edit", "rmI"].includes(a)) {
-        if (a === "add") {
-            var itm = { n: b[0], cat: b[1], qty: b[2], prc: b[3], unt: b[4], added: new Date(), custF: b[5] || {} };
-            i.push(itm);
-            if (!c.includes(b[1])) c.push(b[1]);
-            t.push({ type: "add", itm });
-        } else if (a === "edit" && i[b[0]]) {
-            t.push({ type: "edit", old: i[b[0]], new: b.slice(1) });
-            i[b[0]] = { ...i[b[0]], n: b[1], cat: b[2], qty: b[3], prc: b[4], unt: b[5], custF: b[6] || {} };
-        } else if (a === "rmI" && i[b[0]]) {
-            t.push({ type: "delete", itm: i[b[0]] });
-            i.splice(b[0], 1);
-        }
-        console.log("=== Dashboard ===\nItems: " + i.length + "\nTotal: $" + i.reduce((tot, x) => tot + x.qty * x.prc, 0).toFixed(2) + "\nCats: " + c.join(', '));
+const Commands = {
+    ADD: "add",
+    EDIT: "edit",
+    REMOVE: "remove",
+    SALE: "sale",
+    RESTOCK: "restock",
+    SEARCH: "search",
+    VIEW: "view",
+    EXPORTCSV: "exportCSV",
+    VIEW_LOGS: "viewLogs",
+    ADD_FIELD: "addField",
+    UPDATE_FIELD: "updateField",
+    VIEW_LAST_ADDED: "viewLastAdded",
+    IMPORT: "import"
+};
+
+
+function add({name, category, quantity, price, unit, customFields}) {
+    var item = { name, category, quantity, price, unit, addedDate: new Date(), custF: customFields || {} };
+    items.push(item);
+    
+    if (!categories.includes(category)) {
+        categories.push(category);
     }
-    if (["Sale", "rstck"].includes(a)) {
-        for (let k of i) {
-            if (k.n === b[0]) {
-                if (a === "Sale" && k.qty >= b[1]) {
-                    k.qty -= b[1];
-                    t.push({ type: "sale", itm: k, qtyS: b[1], d: new Date() });
-                    console.log(`Sold ${b[1]} ${k.unt} of ${k.n}`);
-                } else if (a === "rstck") {
-                    k.qty += b[1];
-                    t.push({ type: "restock", itm: k, qtyR: b[1], d: new Date() });
-                    console.log(`Restocked ${b[1]} ${k.unt} of ${k.n}`);
-                }
-                break;
+
+    logs.push({ type: "add", item });
+}
+
+function edit(index, {name, category, quantity, price, unit, customFields}) {
+    if (!index && index != 0) {
+        throw Error("Index must be present");
+    }
+
+    let newItem = { ...items[index], name, category, quantity, price, unit, customFields }
+    logs.push({ type: "edit", old: items[index], new: {...items[index]} });
+    items[index] = newItem;
+}
+
+function remove(index) {
+    if (!index) {
+        throw Error("Index must be present");
+    }
+    
+    alert(`ALERT: Item ${items[index].name} is being removed.`)
+
+    logs.push({ type: "delete", item: items[index] });
+
+    items.splice(items[index], 1);
+    
+    console.log("=== Dashboard ===")
+    console.log(`Items: ${items.length}`)
+    
+    let totalPrice = items.reduce((total, item) => total + item.quantity * item.price, 0);
+
+    console.log("Total: $" + totalPrice.toFixed(2))
+    console.log("\nCategories: " + c.join(', '));
+}
+
+function search(query) {
+    query = query.toLowerCase();
+    
+    let filteredItems = items.filter(item => {
+        if (item.name.includes(query) || item.category.includes(query)) {
+            return true;
+        }
+        return false;
+    })
+
+    console.log(filteredItems);
+}
+
+function viewInventory() {
+    console.log("=== Inv ===");
+    console.log(items);
+}
+
+function viewLogs() {
+    console.log("Logs:\n", logs);
+}
+
+
+function exportItemsCSV() {
+    itemData = items.map(item => Object.values(item).join(','))
+    console.log("CSV:")
+    console.log(["Name,Category,Quantity,Price,Unit,AddedDate"].concat(itemData).join('\n'));
+}
+
+function importItems(importedItems) {
+    for (let item of importedItems) {
+        add({name: item.name, 
+            category: item.category,
+            quantity: item.quantity, 
+            price: item.price, 
+            unit: item.unit})
+    }
+}
+
+function addField(index) {
+    fields[index] = null;
+}
+
+function updateField(name, fieldIndex, fieldValue) {
+    let item = items.find(item => item.name === name);
+
+    if (item.customFields && item.customFields[fieldIndex]) {
+        item.customFields[fieldIndex] = fieldValue
+    }
+}
+
+function viewLastAdded() {
+    console.log(items.map(item => `${item.name}: ${Math.floor((new Date() - new Date(item.addedDate)) / (1000 * 60 * 60 * 24))}d`).join('\n'))
+}
+
+
+function addSold(name, saleQuantity) {
+    for (let item of items) {
+        if (item.name == name) {
+            item.quantity -= saleQuantity;
+            if (item.quantity < 10) {
+                alert(`ALERT: Item ${item.name} is below 10 units! Current quantity: ${item.quantity}`)
             }
+            logs.push({ type: "sale", item: item, saleQuantity: saleQuantity, date: new Date() });
+            console.log(`Sold ${saleQuantity} ${item.unit} of ${item.name}`);
         }
     }
-    if (a === "srch") console.log(i.filter(x => [x.n, x.cat, x.prc].some(v => v.toString().toLowerCase().includes(b[0].toLowerCase()))));
-    if (a === "vwI") console.log("=== Inv ===", i);
-    if (a === "xprtAll") console.log("CSV:\n" + ["Name,Category,Quantity,Price,Unit,AddedAt"].concat(i.map(x => Object.values(x).join(','))).join('\n'));
-    if (a === "vwAllT") console.log("Transactions:\n", t);
-    if (a === "vwIAg") console.log(i.map(x => `${x.n}: ${Math.floor((new Date() - new Date(x.added)) / (1000 * 60 * 60 * 24))}d`).join('\n'));
-    if (a === "Imprt") b[0].forEach(x => doStuff("add", [x.n, x.cat, x.quantity, x.price, x.unit]));
-    if (a === "addFld" && !f[b[0]]) f[b[0]] = null;
-    if (a === "udCFld") i.find(x => x.n === b[0])?.custF[b[1]] = b[2];
+}
+function restock(name, restockQuantity) {
+    for (let item of items) {
+        if (item.name == name) {
+            item.quantity += restockQuantity;
+            logs.push({ type: "restock", item: item, quantityRestock: restockQuantity, date: new Date() });
+            console.log(`Restocked ${b[1]} ${item.unit} of ${item.name}`);
+        }
+    }
+}
+
+
+function run_command(command, input) {
+    switch (command) {
+        case Commands.ADD:
+            add(input);
+            break;
+        case Commands.EDIT:
+            edit(input.index, input);
+            break;
+        case Commands.REMOVE:
+            remove(input.index);
+            break;
+        case Commands.SALE:
+            addSold(input.index, input.saleQuantity);
+            break;
+        case Commands.RESTOCK:
+            restock(input.name, input.restockQuantity);
+            break;
+        case Commands.SEARCH:
+            search(input.query);
+            break;
+        case Commands.VIEW:
+            viewInventory();
+            break;
+        case Commands.EXPORTCSV:
+            exportItemsCSV();
+            break;
+        case Commands.VIEW_LOGS:
+            viewLogs();
+            break;
+        case Commands.VIEW_LAST_ADDED:
+            viewLastAdded();
+            break;
+        case Commands.IMPORT:
+            importItems(input);
+            break;
+        case Commands.ADD_FIELD:
+            addField(input.index);
+            break;
+        case Commands.UPDATE_FIELD:
+            updateField(PictureInPictureEvent.name, input.fieldIndex, PictureInPictureEvent.fieldValue)
+            break;
+    }
 }
